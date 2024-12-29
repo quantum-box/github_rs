@@ -203,7 +203,7 @@ mod tests {
             }
         });
 
-        let server = mockito::Server::new();
+        let mut server = mockito::Server::new();
         let _m = server
             .mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
@@ -231,7 +231,7 @@ mod tests {
             "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         });
 
-        let server = mockito::Server::new();
+        let mut server = mockito::Server::new();
         let _m = server
             .mock("POST", "/repos/owner/repo/git/refs")
             .match_body(mockito::Matcher::Json(expected_body))
