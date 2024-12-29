@@ -107,10 +107,7 @@ impl GitHubClient {
             .and_then(|sha| sha.as_str())
             .map(String::from)
             .ok_or_else(|| {
-                reqwest::Error::from(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Invalid response format: missing object.sha",
-                ))
+                reqwest::Error::status(reqwest::StatusCode::UNPROCESSABLE_ENTITY)
             })
     }
 
@@ -133,10 +130,7 @@ impl GitHubClient {
         // Check if the response indicates success (201 Created)
         if !response.status().is_success() {
             let error_json: Value = response.json().await?;
-            return Err(reqwest::Error::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to create branch: {}", error_json["message"].as_str().unwrap_or("Unknown error")),
-            )));
+            return Err(reqwest::Error::status(response.status()));
         }
         
         Ok(())
