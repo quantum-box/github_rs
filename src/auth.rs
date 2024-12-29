@@ -9,8 +9,12 @@ impl AuthToken {
     }
 
     pub fn from_env() -> Result<Self, std::env::VarError> {
+        use tracing::{debug, info};
+        
         dotenvy::dotenv().ok();
+        info!(target: "auth", "Loading GitHub token from environment");
         let token = std::env::var("GITHUB_TOKEN")?;
+        debug!(target: "auth", token_prefix = %&token[..10], "Token loaded successfully");
         Ok(Self(token))
     }
 
@@ -21,7 +25,8 @@ impl AuthToken {
 
 pub fn build_auth_headers(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    let auth_value = format!("token {}", token);
+    let auth_value = format!("token {}", token);  // GitHub API expects "token" prefix
+    println!("Debug - Auth header prefix: token");  // Debug log without exposing full token
     headers.insert(
         AUTHORIZATION,
         HeaderValue::from_str(&auth_value).expect("Invalid token format"),

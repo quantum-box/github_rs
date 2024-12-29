@@ -17,9 +17,34 @@ impl GitHubClient {
     }
 
     pub async fn get(&self, path: &str) -> reqwest::Result<Response> {
+        use tracing::{debug, info, warn};
+        
         let url = format!("{}{}", self.base_url, path);
+        info!(target: "github_client", method = "GET", %url, "Making API request");
+        
         let headers = build_auth_headers(self.token.as_str());
-        self.http.get(url).headers(headers).send().await
+        debug!(target: "github_client", ?headers, "Request headers prepared");
+        
+        let response = self.http.get(url).headers(headers).send().await?;
+        let status = response.status();
+        
+        if !status.is_success() {
+            warn!(
+                target: "github_client",
+                %status,
+                endpoint = %path,
+                "Request failed"
+            );
+        } else {
+            info!(
+                target: "github_client",
+                %status,
+                endpoint = %path,
+                "Request successful"
+            );
+        }
+        
+        response.error_for_status()
     }
 
     pub async fn post<T: serde::Serialize>(

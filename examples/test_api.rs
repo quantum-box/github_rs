@@ -4,21 +4,31 @@ use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    github::init_tracing();
+    tracing::info!("Initializing GitHub API client");
     let auth_token = AuthToken::from_env()?;
     let client = GitHubClient::new(auth_token.as_str().to_string());
+    tracing::info!("GitHub API client initialized");
 
     println!("Testing GitHub API Client...\n");
 
     // Test 1: Get user information
     println!("Test 1: Getting user information...");
-    let response = client.get("/user").await?;
-    if response.status().is_success() {
-        let user_info: serde_json::Value = response.json().await?;
-        println!("✓ Successfully retrieved user info:");
-        println!("  Login: {}", user_info["login"]);
-        println!("  Name: {}", user_info["name"]);
-    } else {
-        println!("✗ Failed to get user info: {}", response.status());
+    match client.get("/user").await {
+        Ok(response) => {
+            let user_info: serde_json::Value = response.json().await?;
+            println!("✓ Successfully retrieved user info:");
+            println!("  Login: {}", user_info["login"]);
+            println!("  Name: {}", user_info["name"]);
+        },
+        Err(e) => {
+            println!("✗ Failed to get user info: {}", e);
+            if let Some(status) = e.status() {
+                if status == reqwest::StatusCode::FORBIDDEN {
+                    println!("This might be due to invalid token or insufficient permissions");
+                }
+            }
+        }
     }
 
     // Test 2: List repositories
