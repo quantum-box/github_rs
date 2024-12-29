@@ -4,8 +4,14 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ACCEPT};
 pub struct AuthToken(pub String);
 
 impl AuthToken {
-    pub fn new(token: String) -> Self {
-        Self(token)
+    pub fn new<S: Into<String>>(token: S) -> Self {
+        Self(token.into())
+    }
+
+    pub fn from_env() -> Result<Self, std::env::VarError> {
+        dotenvy::dotenv().ok();
+        let token = std::env::var("GITHUB_TOKEN")?;
+        Ok(Self(token))
     }
 
     pub fn as_str(&self) -> &str {
@@ -15,7 +21,7 @@ impl AuthToken {
 
 pub fn build_auth_headers(token: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
-    let auth_value = format!("Bearer {}", token);
+    let auth_value = format!("token {}", token);
     headers.insert(
         AUTHORIZATION,
         HeaderValue::from_str(&auth_value).expect("Invalid token format"),

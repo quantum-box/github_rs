@@ -1,10 +1,11 @@
 use github::client::GitHubClient;
+use github::auth::AuthToken;
 use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let token = "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";
-    let client = GitHubClient::new(token.to_string());
+    let auth_token = AuthToken::from_env()?;
+    let client = GitHubClient::new(auth_token.as_str().to_string());
 
     println!("Testing GitHub API Client...\n");
 
