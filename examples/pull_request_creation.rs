@@ -1,4 +1,4 @@
-use github_rs::client::GitHubClient;
+use github::client::GitHubClient;
 
 /// プルリクエスト作成のサンプルコード
 #[tokio::main]
@@ -8,12 +8,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = GitHubClient::new(token);
 
     // リポジトリ情報
-    let owner = "owner";
-    let repo = "repo";
+    let owner = "quantum-box";
+    let repo = "github_rs";
     let base_branch = "main";
-    let head_branch = "feature";
-    let pr_title = "新機能の追加";
-    let pr_body = "このプルリクエストは新機能を追加します。\n\n変更内容:\n- 機能A\n- 機能B";
+    let head_branch = format!("test-branch-{}", chrono::Utc::now().timestamp());
+    let pr_title = "テスト用プルリクエスト";
+    let pr_body = "このプルリクエストはexampleのテスト実行により作成されました。\n\n自動テスト:\n- プルリクエスト作成機能のテスト\n- APIの動作確認";
 
     println!("プルリクエストを作成中...");
     match client
