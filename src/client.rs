@@ -1,5 +1,7 @@
 use crate::auth::{build_auth_headers, AuthToken};
 use reqwest::{Client, Response};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub struct GitHubClient {
     http: Client,
@@ -87,6 +89,58 @@ impl GitHubClient {
     pub async fn get_user_repos(&self) -> reqwest::Result<Response> {
         self.get("/user/repos").await
     }
+
+    /// Get the latest commit SHA of a base branch
+    pub async fn get_base_branch_sha(
+        &self,
+        owner: &str,
+        repo: &str,
+        base_branch: &str,
+    ) -> reqwest::Result<String> {
+        let path = format!("/repos/{}/{}/git/ref/heads/{}", owner, repo, base_branch);
+        let response = self.get(&path).await?;
+        let json: Value = response.json().await?;
+        
+        // Extract the SHA from the response JSON
+        json.get("object")
+            .and_then(|obj| obj.get("sha"))
+            .and_then(|sha| sha.as_str())
+            .map(String::from)
+            .ok_or_else(|| {
+                reqwest::Error::from(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid response format: missing object.sha",
+                ))
+            })
+    }
+
+    /// Create a new branch using a base SHA
+    pub async fn create_branch(
+        &self,
+        owner: &str,
+        repo: &str,
+        new_branch_name: &str,
+        base_sha: &str,
+    ) -> reqwest::Result<()> {
+        let path = format!("/repos/{}/{}/git/refs", owner, repo);
+        let body = serde_json::json!({
+            "ref": format!("refs/heads/{}", new_branch_name),
+            "sha": base_sha
+        });
+        
+        let response = self.post(&path, &body).await?;
+        
+        // Check if the response indicates success (201 Created)
+        if !response.status().is_success() {
+            let error_json: Value = response.json().await?;
+            return Err(reqwest::Error::from(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to create branch: {}", error_json["message"].as_str().unwrap_or("Unknown error")),
+            )));
+        }
+        
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -99,5 +153,67 @@ mod tests {
         let client = GitHubClient::new(token.clone());
         assert_eq!(client.token.as_str(), token);
         assert_eq!(client.base_url, "https://api.github.com");
+    }
+
+    #[tokio::test]
+    async fn test_get_base_branch_sha() {
+        use mockito::{mock, Server};
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let mock_response = json!({
+            "ref": "refs/heads/main",
+            "object": {
+                "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+                "type": "commit",
+                "url": "https://api.github.com/repos/octocat/Hello-World/git/commits/6dcb09b5b57875f334f61aebed695e2e4193db5e"
+            }
+        });
+
+        let _m = mock("GET", "/repos/owner/repo/git/ref/heads/main")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(mock_response.to_string())
+            .create_async()
+            .await;
+
+        let mut client = GitHubClient::new("test_token".to_string());
+        client.base_url = server.url();
+
+        let result = client.get_base_branch_sha("owner", "repo", "main").await;
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_branch() {
+        use mockito::{mock, Server};
+        use serde_json::json;
+
+        let mut server = Server::new();
+        let expected_body = json!({
+            "ref": "refs/heads/new-feature",
+            "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
+        });
+
+        let _m = mock("POST", "/repos/owner/repo/git/refs")
+            .match_body(mockito::Matcher::Json(expected_body))
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"ref": "refs/heads/new-feature", "object": {"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"}}"#)
+            .create_async()
+            .await;
+
+        let mut client = GitHubClient::new("test_token".to_string());
+        client.base_url = server.url();
+
+        let result = client
+            .create_branch("owner", "repo", "new-feature", "6dcb09b5b57875f334f61aebed695e2e4193db5e")
+            .await;
+        
+        assert!(result.is_ok());
     }
 }

@@ -62,8 +62,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Test 3: Test error handling (404)
-    println!("\nTest 3: Testing error handling (404)...");
+    // Test 3: Create a new branch
+    println!("\nTest 3: Creating a new branch...");
+    let owner = "quantum-box";  // Replace with actual owner if different
+    let repo = "github_rs";     // Replace with actual repo if different
+    let base_branch = "main";
+    let new_branch = format!("test-branch-{}", chrono::Utc::now().timestamp());
+
+    println!("  Getting SHA of {} branch...", base_branch);
+    match client.get_base_branch_sha(owner, repo, base_branch).await {
+        Ok(base_sha) => {
+            println!("  ✓ Got base SHA: {:.8}...", base_sha);
+            
+            println!("  Creating new branch: {}...", new_branch);
+            match client.create_branch(owner, repo, &new_branch, &base_sha).await {
+                Ok(()) => {
+                    println!("  ✓ Successfully created branch: {}", new_branch);
+                }
+                Err(e) => {
+                    println!("  ✗ Failed to create branch: {}", e);
+                    if let Some(status) = e.status() {
+                        if status == reqwest::StatusCode::FORBIDDEN {
+                            println!("  This might be due to invalid token or insufficient permissions");
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("  ✗ Failed to get base SHA: {}", e);
+            if let Some(status) = e.status() {
+                if status == reqwest::StatusCode::FORBIDDEN {
+                    println!("  This might be due to invalid token or insufficient permissions");
+                }
+            }
+        }
+    }
+
+    // Test 4: Test error handling (404)
+    println!("\nTest 4: Testing error handling (404)...");
     let response = client.get("/non_existent_endpoint").await?;
     println!("✓ Got expected status code: {}", response.status());
 
