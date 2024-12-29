@@ -1,6 +1,5 @@
 use crate::auth::{build_auth_headers, AuthToken};
 use reqwest::{Client, Response};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub struct GitHubClient {
@@ -107,7 +106,9 @@ impl GitHubClient {
             .and_then(|sha| sha.as_str())
             .map(String::from)
             .ok_or_else(|| {
-                reqwest::Error::status(reqwest::StatusCode::UNPROCESSABLE_ENTITY)
+                reqwest::Error::builder()
+                    .status(reqwest::StatusCode::UNPROCESSABLE_ENTITY)
+                    .build()
             })
     }
 
@@ -130,7 +131,9 @@ impl GitHubClient {
         // Check if the response indicates success (201 Created)
         if !response.status().is_success() {
             let error_json: Value = response.json().await?;
-            return Err(reqwest::Error::status(response.status()));
+            return Err(reqwest::Error::builder()
+                .status(response.status())
+                .build());
         }
         
         Ok(())
