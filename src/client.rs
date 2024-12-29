@@ -172,6 +172,169 @@ impl GitHubClient {
         }
         Ok(())
     }
+
+    /// 最新のコミットのツリーSHAを取得する
+    pub async fn get_latest_tree_sha(
+        &self,
+        owner: &str,
+        repo: &str,
+        commit_sha: &str,
+    ) -> Result<String, GitHubError> {
+        let path = format!("/repos/{}/{}/git/commits/{}", owner, repo, commit_sha);
+        let response = self.get(&path).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+
+        let json: Value = response.json().await?;
+        json.get("tree")
+            .and_then(|tree| tree.get("sha"))
+            .and_then(|sha| sha.as_str())
+            .map(String::from)
+            .ok_or_else(|| GitHubError::ParseError("Failed to extract tree SHA from response".to_string()))
+    }
+
+    /// ファイル内容のBLOBを作成する
+    pub async fn create_blob(
+        &self,
+        owner: &str,
+        repo: &str,
+        content: &str,
+    ) -> Result<String, GitHubError> {
+        let path = format!("/repos/{}/{}/git/blobs", owner, repo);
+        let body = serde_json::json!({
+            "content": content,
+            "encoding": "utf-8"
+        });
+
+        let response = self.post(&path, &body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+
+        let json: Value = response.json().await?;
+        json.get("sha")
+            .and_then(|sha| sha.as_str())
+            .map(String::from)
+            .ok_or_else(|| GitHubError::ParseError("Failed to extract blob SHA from response".to_string()))
+    }
+
+    /// BLOBを含むツリーを作成する
+    pub async fn create_tree(
+        &self,
+        owner: &str,
+        repo: &str,
+        base_tree: &str,
+        path: &str,
+        blob_sha: &str,
+    ) -> Result<String, GitHubError> {
+        let api_path = format!("/repos/{}/{}/git/trees", owner, repo);
+        let body = serde_json::json!({
+            "base_tree": base_tree,
+            "tree": [{
+                "path": path,
+                "mode": "100644",
+                "type": "blob",
+                "sha": blob_sha
+            }]
+        });
+
+        let response = self.post(&api_path, &body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+
+        let json: Value = response.json().await?;
+        json.get("sha")
+            .and_then(|sha| sha.as_str())
+            .map(String::from)
+            .ok_or_else(|| GitHubError::ParseError("Failed to extract tree SHA from response".to_string()))
+    }
+
+    /// 新しいコミットを作成する
+    pub async fn create_commit(
+        &self,
+        owner: &str,
+        repo: &str,
+        message: &str,
+        tree_sha: &str,
+        parent_sha: &str,
+    ) -> Result<String, GitHubError> {
+        let path = format!("/repos/{}/{}/git/commits", owner, repo);
+        let body = serde_json::json!({
+            "message": message,
+            "tree": tree_sha,
+            "parents": [parent_sha]
+        });
+
+        let response = self.post(&path, &body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+
+        let json: Value = response.json().await?;
+        json.get("sha")
+            .and_then(|sha| sha.as_str())
+            .map(String::from)
+            .ok_or_else(|| GitHubError::ParseError("Failed to extract commit SHA from response".to_string()))
+    }
+
+    /// ブランチの先端を更新する
+    pub async fn update_branch_reference(
+        &self,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+        commit_sha: &str,
+    ) -> Result<(), GitHubError> {
+        let path = format!("/repos/{}/{}/git/refs/heads/{}", owner, repo, branch);
+        let body = serde_json::json!({
+            "sha": commit_sha,
+            "force": false
+        });
+
+        let response = self.patch(&path, &body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
