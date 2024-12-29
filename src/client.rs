@@ -190,12 +190,11 @@ mod tests {
         assert_eq!(client.base_url, "https://api.github.com");
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_get_base_branch_sha() {
-        use mockito::Server;
+        use mockito::mock;
         use serde_json::json;
 
-        let mut server = Server::new();
         let mock_response = json!({
             "ref": "refs/heads/main",
             "object": {
@@ -205,14 +204,14 @@ mod tests {
             }
         });
 
-        let _m = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
+        let _m = mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(mock_response.to_string())
             .create();
 
         let mut client = GitHubClient::new("test_token".to_string());
-        client.base_url = server.url();
+        client.base_url = mockito::server_url();
 
         let result = client.get_base_branch_sha("owner", "repo", "main").await;
         assert!(result.is_ok());
@@ -222,18 +221,17 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_create_branch() {
-        use mockito::Server;
+        use mockito::mock;
         use serde_json::json;
 
-        let mut server = Server::new();
         let expected_body = json!({
             "ref": "refs/heads/new-feature",
             "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         });
 
-        let _m = server.mock("POST", "/repos/owner/repo/git/refs")
+        let _m = mock("POST", "/repos/owner/repo/git/refs")
             .match_body(mockito::Matcher::Json(expected_body))
             .with_status(201)
             .with_header("content-type", "application/json")
@@ -241,7 +239,7 @@ mod tests {
             .create();
 
         let mut client = GitHubClient::new("test_token".to_string());
-        client.base_url = server.url();
+        client.base_url = mockito::server_url();
 
         let result = client
             .create_branch("owner", "repo", "new-feature", "6dcb09b5b57875f334f61aebed695e2e4193db5e")
