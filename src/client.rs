@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(client.base_url, "https://api.github.com");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_get_base_branch_sha() {
         use serde_json::json;
 
@@ -203,9 +203,8 @@ mod tests {
             }
         });
 
-        let mut server = mockito::Server::new();
-        let _m = server
-            .mock("GET", "/repos/owner/repo/git/ref/heads/main")
+        let server = mockito::Server::new();
+        let mock = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(mock_response.to_string())
@@ -222,7 +221,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_create_branch() {
         use serde_json::json;
 
@@ -231,9 +230,8 @@ mod tests {
             "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         });
 
-        let mut server = mockito::Server::new();
-        let _m = server
-            .mock("POST", "/repos/owner/repo/git/refs")
+        let server = mockito::Server::new();
+        let mock = server.mock("POST", "/repos/owner/repo/git/refs")
             .match_body(mockito::Matcher::Json(expected_body))
             .with_status(201)
             .with_header("content-type", "application/json")
