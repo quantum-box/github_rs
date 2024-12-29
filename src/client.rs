@@ -123,27 +123,26 @@ impl GitHubClient {
         let path = format!("/repos/{}/{}/git/ref/heads/{}", owner, repo, base_branch);
         let response = self.get(&path).await?;
         let status = response.status();
-        
+
         if !status.is_success() {
             let error_json: Value = response.json().await?;
             let message = error_json["message"]
                 .as_str()
                 .unwrap_or("Unknown error")
                 .to_string();
-            return Err(GitHubError::ApiError {
-                status,
-                message,
-            });
+            return Err(GitHubError::ApiError { status, message });
         }
 
         let json: Value = response.json().await?;
-        
+
         // Extract the SHA from the response JSON
         json.get("object")
             .and_then(|obj| obj.get("sha"))
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| GitHubError::ParseError("Failed to extract SHA from response".to_string()))
+            .ok_or_else(|| {
+                GitHubError::ParseError("Failed to extract SHA from response".to_string())
+            })
     }
 
     /// Create a new branch using a base SHA
@@ -159,20 +158,17 @@ impl GitHubClient {
             "ref": format!("refs/heads/{}", new_branch_name),
             "sha": base_sha
         });
-        
+
         let response = self.post(&path, &body).await?;
         let status = response.status();
-        
+
         if !status.is_success() {
             let error_json: Value = response.json().await?;
             let message = error_json["message"]
                 .as_str()
                 .unwrap_or("Unknown error")
                 .to_string();
-            return Err(GitHubError::ApiError {
-                status,
-                message,
-            });
+            return Err(GitHubError::ApiError { status, message });
         }
         Ok(())
     }
@@ -216,10 +212,7 @@ mod tests {
 
         let result = client.get_base_branch_sha("owner", "repo", "main").await;
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            "6dcb09b5b57875f334f61aebed695e2e4193db5e"
-        );
+        assert_eq!(result.unwrap(), "6dcb09b5b57875f334f61aebed695e2e4193db5e");
     }
 
     #[tokio::test]
@@ -244,9 +237,14 @@ mod tests {
         client.base_url = server.url();
 
         let result = client
-            .create_branch("owner", "repo", "new-feature", "6dcb09b5b57875f334f61aebed695e2e4193db5e")
+            .create_branch(
+                "owner",
+                "repo",
+                "new-feature",
+                "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+            )
             .await;
-        
+
         assert!(result.is_ok());
     }
 }
