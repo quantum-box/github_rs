@@ -9,8 +9,19 @@ pub struct GitHubClient {
 
 impl GitHubClient {
     pub fn new(token: String) -> Self {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::USER_AGENT,
+            reqwest::header::HeaderValue::from_static("github-rs-client")
+        );
+        
+        let client = Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("Failed to create HTTP client");
+
         Self {
-            http: Client::new(),
+            http: client,
             token: AuthToken::new(token),
             base_url: "https://api.github.com".to_string(),
         }

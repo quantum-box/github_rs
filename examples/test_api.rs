@@ -33,18 +33,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: List repositories
     println!("\nTest 2: Listing repositories...");
-    let response = client.get_user_repos().await?;
-    if response.status().is_success() {
-        let repos: Vec<serde_json::Value> = response.json().await?;
-        println!("✓ Successfully retrieved repositories:");
-        for repo in repos.iter().take(5) {
-            println!("  - {} ({})", repo["name"], repo["html_url"]);
+    match client.get_user_repos().await {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                let repos: Vec<serde_json::Value> = response.json().await?;
+                println!("✓ Successfully retrieved repositories:");
+                for repo in repos.iter().take(5) {
+                    println!("  - {} ({})", repo["name"], repo["html_url"]);
+                }
+                if repos.len() > 5 {
+                    println!("  ... and {} more", repos.len() - 5);
+                }
+            } else {
+                println!("✗ Failed to list repos: {}", status);
+                if status == reqwest::StatusCode::FORBIDDEN {
+                    println!("This might be due to invalid token or insufficient permissions");
+                }
+            }
+        },
+        Err(e) => {
+            println!("✗ Failed to list repos: {}", e);
+            if let Some(status) = e.status() {
+                if status == reqwest::StatusCode::FORBIDDEN {
+                    println!("This might be due to invalid token or insufficient permissions");
+                }
+            }
         }
-        if repos.len() > 5 {
-            println!("  ... and {} more", repos.len() - 5);
-        }
-    } else {
-        println!("✗ Failed to list repos: {}", response.status());
     }
 
     // Test 3: Test error handling (404)
