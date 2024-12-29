@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(client.base_url, "https://api.github.com");
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_get_base_branch_sha() {
         use serde_json::json;
 
@@ -221,7 +221,7 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_create_branch() {
         use serde_json::json;
 
