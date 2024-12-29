@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let owner = "quantum-box";
     let repo = "github_rs";
     let base_branch = "main";
-    let head_branch = format!("test-branch-{}", chrono::Utc::now().timestamp());
+    let head_branch = "test-branch-1735475257";
     let pr_title = "テスト用プルリクエスト";
     let pr_body = "このプルリクエストはexampleのテスト実行により作成されました。\n\n自動テスト:\n- プルリクエスト作成機能のテスト\n- APIの動作確認";
 
