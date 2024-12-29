@@ -21,9 +21,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match client.get_base_branch_sha(owner, repo, base_branch).await {
         Ok(base_sha) => {
             println!("✓ Got base SHA: {:.8}...", base_sha);
-            
+
             println!("Creating new branch: {}...", new_branch);
-            match client.create_branch(owner, repo, &new_branch, &base_sha).await {
+            match client
+                .create_branch(owner, repo, &new_branch, &base_sha)
+                .await
+            {
                 Ok(()) => {
                     println!("✓ Successfully created branch: {}", new_branch);
                 }
@@ -31,7 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("✗ Failed to create branch: {}", e);
                     if let Some(status) = e.status() {
                         if status == reqwest::StatusCode::FORBIDDEN {
-                            println!("This might be due to invalid token or insufficient permissions");
+                            println!(
+                                "This might be due to invalid token or insufficient permissions"
+                            );
                         }
                     }
                 }

@@ -200,7 +200,8 @@ mod tests {
         });
 
         let mut server = mockito::Server::new_async().await;
-        let _mock = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
+        let _mock = server
+            .mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(mock_response.to_string())
