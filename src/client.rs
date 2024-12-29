@@ -343,6 +343,38 @@ impl GitHubClient {
 
         Ok(())
     }
+
+    /// プルリクエストを作成する
+    pub async fn create_pull_request(
+        &self,
+        owner: &str,
+        repo: &str,
+        base: &str,   // ベースブランチ
+        head: &str,   // プルリクエストの head ブランチ
+        title: &str,
+        body: &str,
+    ) -> Result<(), GitHubError> {
+        let path = format!("/repos/{}/{}/pulls", owner, repo);
+        let request_body = serde_json::json!({
+            "title": title,
+            "body": body,
+            "base": base,
+            "head": head
+        });
+
+        let response = self.post(&path, &request_body).await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError { status, message });
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -414,6 +446,43 @@ mod tests {
                 "repo",
                 "new-feature",
                 "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+            )
+            .await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_create_pull_request() {
+        use serde_json::json;
+
+        let expected_body = json!({
+            "title": "テスト PR",
+            "body": "PR の本文",
+            "base": "main",
+            "head": "feature-branch"
+        });
+
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server.mock("POST", "/repos/owner/repo/pulls")
+            .match_body(mockito::Matcher::Json(expected_body))
+            .with_status(201)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"number": 1, "state": "open"}"#)
+            .create_async()
+            .await;
+
+        let mut client = GitHubClient::new("test_token".to_string());
+        client.base_url = server.url();
+
+        let result = client
+            .create_pull_request(
+                "owner",
+                "repo",
+                "main",
+                "feature-branch",
+                "テスト PR",
+                "PR の本文",
             )
             .await;
 
