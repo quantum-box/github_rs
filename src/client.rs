@@ -122,15 +122,16 @@ impl GitHubClient {
     ) -> Result<String, GitHubError> {
         let path = format!("/repos/{}/{}/git/ref/heads/{}", owner, repo, base_branch);
         let response = self.get(&path).await?;
+        let status = response.status();
         
-        if !response.status().is_success() {
+        if !status.is_success() {
             let error_json: Value = response.json().await?;
             let message = error_json["message"]
                 .as_str()
                 .unwrap_or("Unknown error")
                 .to_string();
             return Err(GitHubError::ApiError {
-                status: response.status(),
+                status,
                 message,
             });
         }
@@ -160,15 +161,16 @@ impl GitHubClient {
         });
         
         let response = self.post(&path, &body).await?;
+        let status = response.status();
         
-        if !response.status().is_success() {
+        if !status.is_success() {
             let error_json: Value = response.json().await?;
             let message = error_json["message"]
                 .as_str()
                 .unwrap_or("Unknown error")
                 .to_string();
             return Err(GitHubError::ApiError {
-                status: response.status(),
+                status,
                 message,
             });
         }
