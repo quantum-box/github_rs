@@ -345,12 +345,24 @@ impl GitHubClient {
     }
 
     /// プルリクエストを作成する
+    ///
+    /// # 引数
+    /// * `owner` - リポジトリのオーナー名
+    /// * `repo` - リポジトリ名
+    /// * `base` - マージ先となるベースブランチ名
+    /// * `head` - マージ元となるヘッドブランチ名
+    /// * `title` - プルリクエストのタイトル
+    /// * `body` - プルリクエストの説明文
+    ///
+    /// # 戻り値
+    /// * `Ok(())` - プルリクエストの作成に成功
+    /// * `Err(GitHubError)` - APIリクエストが失敗した場合のエラー
     pub async fn create_pull_request(
         &self,
         owner: &str,
         repo: &str,
-        base: &str,   // ベースブランチ
-        head: &str,   // プルリクエストの head ブランチ
+        base: &str,
+        head: &str,
         title: &str,
         body: &str,
     ) -> Result<(), GitHubError> {
