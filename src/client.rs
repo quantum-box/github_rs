@@ -9,6 +9,21 @@ pub enum GitHubError {
     RequestError(#[from] reqwest::Error),
     #[error("Failed to parse response: {0}")]
     ParseError(String),
+    #[error("Request failed with status {status}: {message}")]
+    ApiError {
+        status: reqwest::StatusCode,
+        message: String,
+    },
+}
+
+impl GitHubError {
+    pub fn status(&self) -> Option<reqwest::StatusCode> {
+        match self {
+            GitHubError::RequestError(e) => e.status(),
+            GitHubError::ApiError { status, .. } => Some(*status),
+            _ => None,
+        }
+    }
 }
 
 pub struct GitHubClient {
@@ -107,6 +122,19 @@ impl GitHubClient {
     ) -> Result<String, GitHubError> {
         let path = format!("/repos/{}/{}/git/ref/heads/{}", owner, repo, base_branch);
         let response = self.get(&path).await?;
+        
+        if !response.status().is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError {
+                status: response.status(),
+                message,
+            });
+        }
+
         let json: Value = response.json().await?;
         
         // Extract the SHA from the response JSON
@@ -133,8 +161,17 @@ impl GitHubClient {
         
         let response = self.post(&path, &body).await?;
         
-        // Check if the response indicates success (201 Created)
-        response.error_for_status()?;
+        if !response.status().is_success() {
+            let error_json: Value = response.json().await?;
+            let message = error_json["message"]
+                .as_str()
+                .unwrap_or("Unknown error")
+                .to_string();
+            return Err(GitHubError::ApiError {
+                status: response.status(),
+                message,
+            });
+        }
         Ok(())
     }
 }
@@ -153,7 +190,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_base_branch_sha() {
-        use mockito::{mock, Server};
+        use mockito::Server;
         use serde_json::json;
 
         let mut server = Server::new();
@@ -166,12 +203,11 @@ mod tests {
             }
         });
 
-        let _m = mock("GET", "/repos/owner/repo/git/ref/heads/main")
+        let _m = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(mock_response.to_string())
-            .create_async()
-            .await;
+            .create();
 
         let mut client = GitHubClient::new("test_token".to_string());
         client.base_url = server.url();
@@ -186,7 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_branch() {
-        use mockito::{mock, Server};
+        use mockito::Server;
         use serde_json::json;
 
         let mut server = Server::new();
@@ -195,13 +231,12 @@ mod tests {
             "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         });
 
-        let _m = mock("POST", "/repos/owner/repo/git/refs")
+        let _m = server.mock("POST", "/repos/owner/repo/git/refs")
             .match_body(mockito::Matcher::Json(expected_body))
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(r#"{"ref": "refs/heads/new-feature", "object": {"sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"}}"#)
-            .create_async()
-            .await;
+            .create();
 
         let mut client = GitHubClient::new("test_token".to_string());
         client.base_url = server.url();
