@@ -198,7 +198,9 @@ impl GitHubClient {
             .and_then(|tree| tree.get("sha"))
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| GitHubError::ParseError("Failed to extract tree SHA from response".to_string()))
+            .ok_or_else(|| {
+                GitHubError::ParseError("Failed to extract tree SHA from response".to_string())
+            })
     }
 
     /// ファイル内容のBLOBを作成する
@@ -230,7 +232,9 @@ impl GitHubClient {
         json.get("sha")
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| GitHubError::ParseError("Failed to extract blob SHA from response".to_string()))
+            .ok_or_else(|| {
+                GitHubError::ParseError("Failed to extract blob SHA from response".to_string())
+            })
     }
 
     /// BLOBを含むツリーを作成する
@@ -269,7 +273,9 @@ impl GitHubClient {
         json.get("sha")
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| GitHubError::ParseError("Failed to extract tree SHA from response".to_string()))
+            .ok_or_else(|| {
+                GitHubError::ParseError("Failed to extract tree SHA from response".to_string())
+            })
     }
 
     /// 新しいコミットを作成する
@@ -304,7 +310,9 @@ impl GitHubClient {
         json.get("sha")
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| GitHubError::ParseError("Failed to extract commit SHA from response".to_string()))
+            .ok_or_else(|| {
+                GitHubError::ParseError("Failed to extract commit SHA from response".to_string())
+            })
     }
 
     /// ブランチの先端を更新する
