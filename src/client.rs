@@ -203,8 +203,8 @@ mod tests {
             }
         });
 
-        let server = mockito::Server::new();
-        let mock = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
+        let mut server = mockito::Server::new();
+        let _mock = server.mock("GET", "/repos/owner/repo/git/ref/heads/main")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(mock_response.to_string())
@@ -230,8 +230,8 @@ mod tests {
             "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e"
         });
 
-        let server = mockito::Server::new();
-        let mock = server.mock("POST", "/repos/owner/repo/git/refs")
+        let mut server = mockito::Server::new();
+        let _mock = server.mock("POST", "/repos/owner/repo/git/refs")
             .match_body(mockito::Matcher::Json(expected_body))
             .with_status(201)
             .with_header("content-type", "application/json")
