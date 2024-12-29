@@ -21,9 +21,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             owner,
             repo,
             base_branch,
-            head_branch,
-            pr_title,
-            pr_body,
+            &head_branch,
+            &pr_title,
+            &pr_body,
         )
         .await
     {
