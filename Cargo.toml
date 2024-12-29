@@ -20,3 +20,7 @@ mockito = "1.2"
 [[example]]
 name = "test_api"
 path = "examples/test_api.rs"
+
+[[example]]
+name = "branch_creation"
+path = "examples/branch_creation.rs"
