@@ -64,8 +64,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 3: Test error handling (404)
     println!("\nTest 3: Testing error handling (404)...");
-    let response = client.get("/non_existent_endpoint").await?;
-    println!("✓ Got expected status code: {}", response.status());
+    let result = client.get("/non_existent_endpoint").await;
+    match result {
+        Ok(_) => {
+            println!("✗ Expected a 404 error, but got a success response");
+            return Err("Expected 404 error but got success".into());
+        }
+        Err(e) => {
+            if let Some(status) = e.status() {
+                if status == reqwest::StatusCode::NOT_FOUND {
+                    println!("✓ Got expected 404 status code");
+                } else {
+                    println!("✗ Expected 404 status code, but got {}", status);
+                    return Err(format!("Expected 404 status code, but got {}", status).into());
+                }
+            } else {
+                println!("✗ Error did not contain a status code");
+                return Err("Error did not contain a status code".into());
+            }
+        }
+    }
 
     println!("\nAll tests completed!");
     Ok(())

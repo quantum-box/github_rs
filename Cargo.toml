@@ -12,7 +12,15 @@ tokio = { version = "1.0", features = ["full"] }
 dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+chrono = "0.4"
+
+[dev-dependencies]
+mockito = "1.2"
 
 [[example]]
 name = "test_api"
 path = "examples/test_api.rs"
+
+[[example]]
+name = "branch_creation"
+path = "examples/branch_creation.rs"
