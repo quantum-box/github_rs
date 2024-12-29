@@ -1,5 +1,5 @@
+use crate::auth::{build_auth_headers, AuthToken};
 use reqwest::{Client, Response};
-use crate::auth::{AuthToken, build_auth_headers};
 
 pub struct GitHubClient {
     http: Client,
@@ -12,9 +12,9 @@ impl GitHubClient {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
             reqwest::header::USER_AGENT,
-            reqwest::header::HeaderValue::from_static("github-rs-client")
+            reqwest::header::HeaderValue::from_static("github-rs-client"),
         );
-        
+
         let client = Client::builder()
             .default_headers(headers)
             .build()
@@ -29,16 +29,16 @@ impl GitHubClient {
 
     pub async fn get(&self, path: &str) -> reqwest::Result<Response> {
         use tracing::{debug, info, warn};
-        
+
         let url = format!("{}{}", self.base_url, path);
         info!(target: "github_client", method = "GET", %url, "Making API request");
-        
+
         let headers = build_auth_headers(self.token.as_str());
         debug!(target: "github_client", ?headers, "Request headers prepared");
-        
+
         let response = self.http.get(url).headers(headers).send().await?;
         let status = response.status();
-        
+
         if !status.is_success() {
             warn!(
                 target: "github_client",
@@ -54,7 +54,7 @@ impl GitHubClient {
                 "Request successful"
             );
         }
-        
+
         response.error_for_status()
     }
 
@@ -65,12 +65,7 @@ impl GitHubClient {
     ) -> reqwest::Result<Response> {
         let url = format!("{}{}", self.base_url, path);
         let headers = build_auth_headers(self.token.as_str());
-        self.http
-            .post(url)
-            .headers(headers)
-            .json(body)
-            .send()
-            .await
+        self.http.post(url).headers(headers).json(body).send().await
     }
 
     pub async fn patch<T: serde::Serialize>(

@@ -1,5 +1,5 @@
-use github::client::GitHubClient;
 use github::auth::AuthToken;
+use github::client::GitHubClient;
 use tokio;
 
 #[tokio::main]
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("✓ Successfully retrieved user info:");
             println!("  Login: {}", user_info["login"]);
             println!("  Name: {}", user_info["name"]);
-        },
+        }
         Err(e) => {
             println!("✗ Failed to get user info: {}", e);
             if let Some(status) = e.status() {
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("This might be due to invalid token or insufficient permissions");
                 }
             }
-        },
+        }
         Err(e) => {
             println!("✗ Failed to list repos: {}", e);
             if let Some(status) = e.status() {

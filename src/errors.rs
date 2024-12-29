@@ -1,5 +1,5 @@
-use thiserror::Error;
 use std::fmt;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum GitHubError {
@@ -22,10 +22,7 @@ pub enum GitHubError {
     InvalidRequestError(String),
 
     #[error("GitHub API error: {status_code} - {message}")]
-    ApiError {
-        status_code: u16,
-        message: String,
-    },
+    ApiError { status_code: u16, message: String },
 }
 
 #[cfg(test)]
@@ -41,6 +38,9 @@ mod tests {
             status_code: 422,
             message: "Validation failed".to_string(),
         };
-        assert_eq!(error.to_string(), "GitHub API error: 422 - Validation failed");
+        assert_eq!(
+            error.to_string(),
+            "GitHub API error: 422 - Validation failed"
+        );
     }
 }
