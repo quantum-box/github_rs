@@ -1,6 +1,15 @@
 use crate::auth::{build_auth_headers, AuthToken};
 use reqwest::{Client, Response};
 use serde_json::Value;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum GitHubError {
+    #[error("HTTP request failed: {0}")]
+    RequestError(#[from] reqwest::Error),
+    #[error("Failed to parse response: {0}")]
+    ParseError(String),
+}
 
 pub struct GitHubClient {
     http: Client,
@@ -95,7 +104,7 @@ impl GitHubClient {
         owner: &str,
         repo: &str,
         base_branch: &str,
-    ) -> reqwest::Result<String> {
+    ) -> Result<String, GitHubError> {
         let path = format!("/repos/{}/{}/git/ref/heads/{}", owner, repo, base_branch);
         let response = self.get(&path).await?;
         let json: Value = response.json().await?;
@@ -105,11 +114,7 @@ impl GitHubClient {
             .and_then(|obj| obj.get("sha"))
             .and_then(|sha| sha.as_str())
             .map(String::from)
-            .ok_or_else(|| {
-                reqwest::Error::builder()
-                    .status(reqwest::StatusCode::UNPROCESSABLE_ENTITY)
-                    .build()
-            })
+            .ok_or_else(|| GitHubError::ParseError("Failed to extract SHA from response".to_string()))
     }
 
     /// Create a new branch using a base SHA
@@ -119,7 +124,7 @@ impl GitHubClient {
         repo: &str,
         new_branch_name: &str,
         base_sha: &str,
-    ) -> reqwest::Result<()> {
+    ) -> Result<(), GitHubError> {
         let path = format!("/repos/{}/{}/git/refs", owner, repo);
         let body = serde_json::json!({
             "ref": format!("refs/heads/{}", new_branch_name),
@@ -129,13 +134,7 @@ impl GitHubClient {
         let response = self.post(&path, &body).await?;
         
         // Check if the response indicates success (201 Created)
-        if !response.status().is_success() {
-            let error_json: Value = response.json().await?;
-            return Err(reqwest::Error::builder()
-                .status(response.status())
-                .build());
-        }
-        
+        response.error_for_status()?;
         Ok(())
     }
 }
